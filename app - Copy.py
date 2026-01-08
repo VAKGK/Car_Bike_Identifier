@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tflite_runtime.interpreter as tflite
+import os  # <--- Added this to handle file paths
 
 # ==================================================
 # Page Configuration
@@ -78,11 +79,16 @@ st.markdown('<div class="subtitle">Upload an image and let the AI decide</div>',
 st.info("📌 Tip: Clear images with a single vehicle work best.")
 
 # ==================================================
-# Load TFLite Model
+# Load TFLite Model (FIXED)
 # ==================================================
 @st.cache_resource
 def load_tflite_model():
-    interpreter = tflite.Interpreter(model_path="car_bike_model.tflite")
+    # Get the path to the current file (app.py)
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    # Create the absolute path to the model file
+    model_path = os.path.join(curr_dir, "car_bike_model.tflite")
+    
+    interpreter = tflite.Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
     return interpreter
 
@@ -162,4 +168,3 @@ if uploaded_file:
     st.markdown(f'<div class="{progress_class}">', unsafe_allow_html=True)
     st.progress(confidence)
     st.markdown("</div>", unsafe_allow_html=True)
-
