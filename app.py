@@ -1,11 +1,11 @@
 import streamlit as st
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
 from PIL import Image
+import tflite_runtime.interpreter as tflite
+import os  # <--- Added this to handle file paths
 
 # ==================================================
-# Page Configuration (ONLY ONCE)
+# Page Configuration
 # ==================================================
 st.set_page_config(
     page_title="Car and Bike Classifier",
@@ -79,16 +79,25 @@ st.markdown('<div class="subtitle">Upload an image and let the AI decide</div>',
 st.info("📌 Tip: Clear images with a single vehicle work best.")
 
 # ==================================================
-# Load Model
+# Load TFLite Model (FIXED)
 # ==================================================
 @st.cache_resource
-def load_cnn_model():
-    return load_model("car_bike_cnn_model.h5")
+def load_tflite_model():
+    # Get the path to the current file (app.py)
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    # Create the absolute path to the model file
+    model_path = os.path.join(curr_dir, "car_bike_model.tflite")
+    
+    interpreter = tflite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+    return interpreter
 
-model = load_cnn_model()
+interpreter = load_tflite_model()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 # ==================================================
-# Image Preprocessing (MATCH TRAINING)
+# Image Preprocessing
 # ==================================================
 def preprocess_image(image):
     image = image.resize((128, 128))
@@ -98,7 +107,7 @@ def preprocess_image(image):
         image = image[:, :, :3]
 
     image = image / 255.0
-    image = np.expand_dims(image, axis=0)
+    image = np.expand_dims(image, axis=0).astype("float32")
     return image
 
 # ==================================================
@@ -115,7 +124,13 @@ if uploaded_file:
 
     with st.spinner("🧠 Analyzing image..."):
         processed_image = preprocess_image(image)
-        prediction = model.predict(processed_image)
+
+        # Set input tensor
+        interpreter.set_tensor(input_details[0]["index"], processed_image)
+        interpreter.invoke()
+
+        # Get output
+        prediction = interpreter.get_tensor(output_details[0]["index"])
         pred = float(prediction[0][0])
 
     # ==================================================
