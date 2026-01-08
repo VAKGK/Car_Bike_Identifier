@@ -162,3 +162,4 @@ if uploaded_file:
     st.markdown(f'<div class="{progress_class}">', unsafe_allow_html=True)
     st.progress(confidence)
     st.markdown("</div>", unsafe_allow_html=True)
+
